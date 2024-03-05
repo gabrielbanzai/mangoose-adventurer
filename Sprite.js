@@ -38,3 +38,4 @@ obstaculoRoxo = new Sprite(832, 967, 50, 220);
 obstaculoMarrom = new Sprite(895, 967, 50, 220);
 obstaculoCinza = new Sprite(958, 967, 50, 220);
 voador1 = new Sprite(12, 1127, 191, 60);
+voador1Quebrado = new Sprite(12, 1000, 230, 95);
