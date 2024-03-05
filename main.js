@@ -281,7 +281,9 @@ voadores = {
             && bloco.y <= fly.y + fly.altura) {
                 // Colisão na frente do fly
                 //console.log(`Colidiu com voador ${i}`)
-                bloco.colidiu()
+                if(faseAtual < 5){
+                    bloco.colidiu()
+                }
                 this.destroi(fly)
                 
             }
