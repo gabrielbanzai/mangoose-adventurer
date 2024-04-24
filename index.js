@@ -483,10 +483,9 @@ sons = {
 }
 
 function main(){
-    // document.getElementById('btn').addEventListener('click', () => {
-    //     loadGame()
-    // })
-    loadGame()
+    document.getElementById('btn').addEventListener('click', () => {
+        loadGame()
+    })
 }
 
 function loadGame(){
