@@ -5,11 +5,17 @@
 - LARGURA
 - frames : taxa de quadros
 */
-var canvas, ctx, ALTURA, LARGURA, maxPulos = 3, velocidade = 8, estadoAtual, recorde, img, altBloco,
+var canvas, ctx, ALTURA, LARGURA,  estadoAtual, recorde, img, altBloco,
 
-pontosParaNovaFase = [15, 30, 50, 80, 120, 150, 190, 250, 400, 500],
-
+maxPulos = 3, 
+velocidade = 8,
+gravidade = 1.567,
+forcaDoPulo = 27,
+vidasInicial = 5,
 faseAtual = 0,
+// forcaDoPulo: 23.6,
+
+pontosParaNovaFase = [15, 30, 50, 80, 120, 150, 190, 250, 400, 500, 750, 1000, 1250, 1500, 2000, 2500, 3500],
 
 labelNovaFase = {
     texto: "",
@@ -47,7 +53,7 @@ chao = {
     atualiza: function(){
         this.x -= velocidade;
         if(this.x <= -40){
-            this.x += 40;
+            this.x += 36;
         }
     },
     desenha: function () {
@@ -61,13 +67,13 @@ bloco = {
     y: 0,
     altura: spriteBoneco.altura,
     largura: spriteBoneco.largura,
-    gravidade: 1.567,
+    gravidade: gravidade,
+    forcaDoPulo: forcaDoPulo,
+    vidas: vidasInicial,
     velocidade: 0,
-    forcaDoPulo: 23.6,
     quantPulos: 0,
     score: 0,
     rotacao: 0,
-    vidas: 5,
     colidindo: false,
     atualiza: function () {
         this.velocidade += this.gravidade;
@@ -80,11 +86,17 @@ bloco = {
             this.velocidade = 0;
         }
     },
-    pula: function () {
+    pula: function (sound = true) {
         if (this.quantPulos < maxPulos) {
             this.velocidade = -this.forcaDoPulo;
             this.quantPulos++;
-            sons.jump.play()
+
+            //--------------------------------------------
+            if(sound){
+                playSound('sounds/jump.mp3', 0.7)
+            }
+            //--------------------------------------------
+
         }
     },
     reset: function () {
@@ -96,7 +108,7 @@ bloco = {
             recorde = this.score;
         }
 
-        this.vidas = 3;
+        this.vidas = vidasInicial;
         this.score = 0;
 
         velocidade = 8;
@@ -125,7 +137,7 @@ bloco = {
         ctx.restore();
 
 
-        // Desenha a bolinha no canvas
+        // // Desenha a bolinha no canvas
         // ctx.beginPath();
         // //Ponto alto frente
         // ctx.arc((this.x + this.largura), this.y, 5, 0, 2 * Math.PI);
@@ -146,14 +158,39 @@ bloco = {
             bloco.colidindo = false;
         }, 500);
 
-        sons.hit.play()
+        playSound('sounds/hit.mp3')
 
         if(bloco.vidas >=1){
             bloco.vidas--;
         }else{
             estadoAtual = estados.perdeu;
             sons.music.pause()
-            sons.loose.play()
+            playSound('sounds/loose.mp3')
+        }
+    },
+    pontua: function (entity, qtdePT = 1) {
+        entity._scored = true
+
+        this.score+=qtdePT;
+
+        let phasePoints = findCurrentPhase(this.score)
+
+        if(faseAtual != phasePoints){
+            passarDeFase();
+        }
+
+        //console.log(findCurrentPhase(this.score))
+
+
+        // if(faseAtual < pontosParaNovaFase.length 
+        // && this.score == pontosParaNovaFase[faseAtual]){
+        //     passarDeFase();
+        // }
+    },
+    ganhaVida: function (life) {
+        if(!life._scored){
+            playSound('sounds/took_life.mp3')
+            bloco.vidas++
         }
     }
 },
@@ -210,13 +247,15 @@ obstaculos = {
                 bloco.colidiu()
 
             } else if (obs.x <= 0 && !obs._scored) {
-                bloco.score++;
-                obs._scored = true;  
 
-                if(faseAtual < pontosParaNovaFase.length 
-                && bloco.score == pontosParaNovaFase[faseAtual]){
-                    passarDeFase();
-                }
+                bloco.pontua(obs)
+                // bloco.score++;
+                // obs._scored = true;  
+
+                // if(faseAtual < pontosParaNovaFase.length 
+                // && bloco.score == pontosParaNovaFase[faseAtual]){
+                //     passarDeFase();
+                // }
 
             } else if (obs.x <= -obs.largura) {
                 this._obs.splice(i, 1);
@@ -262,7 +301,11 @@ voadores = {
 
         if (this.tempoInsercao == 0) {
             this.insere();
-            sons.plane.play()
+
+            //--------------------------------------------
+            playSound('sounds/plane.mp3')
+            //--------------------------------------------
+
         } else {
             this.tempoInsercao--;
         }
@@ -284,7 +327,9 @@ voadores = {
                 if(faseAtual < 5){
                     bloco.colidiu()
                 }
-                this.destroi(fly)
+                if(!bloco.colidindo){
+                    this.destroi(fly)
+                }
                 
             }
 
@@ -296,13 +341,16 @@ voadores = {
             && bloco.y + bloco.altura >= fly.y) {
                 // Colisão no topo do fly
                 //console.log('colisão no topo')
-                this.destroi(fly)
-                this.pontua(fly)
                 
-                if(faseAtual < pontosParaNovaFase.length 
-                && bloco.score == pontosParaNovaFase[faseAtual]){
-                    passarDeFase();
+                if(!fly._scored){
+                    bloco.pontua(fly, 5)
                 }
+                this.destroi(fly)
+                
+                // if(faseAtual < pontosParaNovaFase.length 
+                // && bloco.score == pontosParaNovaFase[faseAtual]){
+                //     passarDeFase();
+                // }
                 //console.log(`O personagem está no nível ${nivelAtual}`);
             }
 
@@ -324,9 +372,9 @@ voadores = {
     },
     destroi: function (fly) {
 
-        sons.explosion.play()
+        playSound('sounds/explosion.mp3')
 
-        bloco.pula()
+        bloco.pula(false)
         bloco.quantPulos = 0
         fly.sprite = this._brokenSprites['voador1Quebrado']
         fly.velocidade++
@@ -336,12 +384,89 @@ voadores = {
                 fly.y++
             }
         }, 1)  
-    },
-    pontua: function (fly) {
-        fly._scored = true
-        bloco.score ++
     }
 },
+
+vida = {
+    _lifes: [],
+    sprite: vidaSPR,
+    _scored: false,
+    tempoInsercao: 9,
+    insere: function () {
+        this._lifes.push({
+            x: LARGURA, 
+            y: chao.y - Math.floor(250 + Math.random() * 200),                           
+            largura: vidaSPR.largura,
+            altura: vidaSPR.altura,
+            sprite: vidaSPR
+        });
+
+        this.tempoInsercao = 500 + Math.floor(800 * Math.random());
+    },
+    atualiza: function () {
+
+        if (this.tempoInsercao == 0) {
+            this.insere();
+
+            //--------------------------------------------
+            playSound('sounds/life_spawn.mp3')
+            //--------------------------------------------
+
+        } else {
+            this.tempoInsercao--;
+        }
+
+        for (var i = 0, tam = this._lifes.length; i < tam; i++) {
+            var life = this._lifes[i];
+            life.x -= velocidade;
+
+            if (
+                (bloco.x + bloco.largura) > life.x
+                && (bloco.x + bloco.largura) < (life.x + life.largura)
+                && (bloco.y + bloco.altura) > life.y
+                && (bloco.y + bloco.altura) < (life.y + life.altura)
+            ) {
+                // Ganha Vida
+                bloco.ganhaVida(life)
+                life._scored = true
+
+                life.sprite = vida2SPR
+
+                setTimeout(() => {
+                    life.sprite = vida3SPR
+                }, 100);
+                setTimeout(() => {
+                    life.sprite = vida4SPR
+                }, 200);
+                setTimeout(() => {
+                    life.sprite = vida5SPR
+                }, 300);
+
+                setTimeout(() => {
+                    this._lifes.splice(i, 1);
+                    tam--;
+                    i--;
+                }, 400);
+            }
+
+
+            if (life.x <= -100) {
+                this._lifes.splice(i, 1);
+                tam--;
+                i--;
+            }
+        }
+    },
+    limpa: function () {
+        this._lifes = [];
+    },
+    desenha: function () {
+        for (var i = 0, tam = this._lifes.length; i < tam; i++) {
+            var life = this._lifes[i];
+            life.sprite.desenha(life.x, life.y);
+        }
+    },
+}
 
 sons = {
     lobby: new Audio('sounds/lobby.mp3'),
@@ -353,16 +478,24 @@ sons = {
     loose: new Audio('sounds/loose.mp3'),
     hit: new Audio('sounds/hit.mp3'),
     plane: new Audio('sounds/plane.mp3'),
+    life_spawn: new Audio('sounds/life_spawn.mp3'),
+    took_life: new Audio('sounds/took_life.mp3'),
 }
 
 function main(){
-    document.getElementById('btn').addEventListener('click', () => {
-        loadGame()
-    })
+    // document.getElementById('btn').addEventListener('click', () => {
+    //     loadGame()
+    // })
+    loadGame()
 }
 
 function loadGame(){
+    
+    //--------------------------------------------
+    sons.lobby.volume = 0.4
     sons.lobby.play()
+    //--------------------------------------------
+
     localStorage.removeItem("recorde");
 
     ALTURA = window.innerHeight;
@@ -413,24 +546,22 @@ function atualiza() {
     if (estadoAtual == estados.jogando) {
         obstaculos.atualiza();
         voadores.atualiza();
+        vida.atualiza();
     } 
 }
 
 function desenha() {
 
-    bg.desenha(0,0);               
+    bg.desenha(0,0); 
 
-    ctx.fillStyle = "#333";
-    ctx.font = "50px Arial";
-    ctx.fillText(bloco.score, 30, 68);
-    ctx.fillText(bloco.vidas, 740, 68);
-
-    ctx.fillStyle = "rgba(0, 0, 0, "+ labelNovaFase.opacidade +")";
-    ctx.fillText(labelNovaFase.texto, canvas.width/2 - ctx.measureText(labelNovaFase.texto).width/2, canvas.height/3);
+    drawHudText(`Pontos: ${bloco.score}`, 25, 68)
+    drawHudText(`Vidas: ${bloco.vidas}`, 580, 68)
+    drawHudText(labelNovaFase.texto, 0, 0, labelNovaFase.opacidade, true)
 
     if(estadoAtual == estados.jogando){
         obstaculos.desenha();
         voadores.desenha();
+        vida.desenha();
     }
 
     chao.desenha();               
@@ -445,20 +576,26 @@ function desenha() {
 
         spriteRecorde.desenha(LARGURA / 2 - spriteRecorde.largura/2, ALTURA / 2 + perdeu.altura/2 - spriteRecorde.altura/2);
     
-        ctx.fillText(bloco.score, 450, 380);
-        ctx.fillStyle = "#fff";
-
+        // ctx.fillText(bloco.score, 450, 380);
+        drawHudText(bloco.score, 450, 380)
+        
         if(bloco.score > recorde){
             novo.desenha(LARGURA / 2 - 130, ALTURA / 2 + 10);
-            ctx.fillText(bloco.score, 460, 480);
+            // ctx.fillText(bloco.score, 460, 480);
+            drawHudText(bloco.score, 460, 480)
         }else{
-            ctx.fillText(recorde, 460, 480);
+            // ctx.fillText(recorde, 460, 480);
+            drawHudText(recorde, 460, 480)
         }
     }
 }
 
 function passarDeFase(fase = null){
-    sons.phase_advanced.play()
+
+    //--------------------------------------------
+    playSound('sounds/phase_advanced.mp3')
+    //--------------------------------------------
+
     velocidade++;
     fase ? faseAtual = fase : faseAtual++;
     bloco.vidas++;
@@ -476,24 +613,76 @@ function passarDeFase(fase = null){
     
 }
 
-function clique(evento) {
+function clique() {
     if (estadoAtual == estados.jogando) {
         bloco.pula();
     } else if (estadoAtual == estados.jogar) {
+
+        //--------------------------------------------
         sons.lobby.pause()
-        sons.start_game.play()
+        playSound('sounds/start_game.mp3')
         sons.music.play()
         sons.music.addEventListener('ended', () => {
             sons.music.play();
         })
+        //--------------------------------------------
+
         estadoAtual = estados.jogando;
     } else if (estadoAtual == estados.perdeu && bloco.y >= 2 * ALTURA) {
+
+        //--------------------------------------------
         sons.lobby.play()
+        //--------------------------------------------
+
         estadoAtual = estados.jogar;
         obstaculos.limpa();
         bloco.reset();
     }
     
+}
+
+function playSound(path, volume = null){
+    let sound = new Audio(path)
+
+    if(volume){
+        sound.volume = volume
+    }
+
+    sound.play()
+}
+
+function drawHudText(text, x, y, opacity = 1, middle = false){
+    // Salvar o estado atual do contexto
+    ctx.save();
+
+    ctx.strokeStyle = `rgba(84, 84, 84, ${opacity})`;
+    ctx.lineWidth = 1;
+    ctx.font = "50px Arial";
+    ctx.fillStyle = `rgba(241, 241, 241, ${opacity})`;
+
+    if(middle){
+        ctx.fillText(text, canvas.width/2 - ctx.measureText(text).width/2, canvas.height/3);
+        ctx.strokeText(text, canvas.width/2 - ctx.measureText(text).width/2, canvas.height/3);    
+    }else{
+        ctx.fillText(text, x, y);
+        ctx.strokeText(text, x, y);
+    }
+    
+    
+
+    // Restaurar o estado do contexto
+    ctx.restore();
+}
+
+
+function findCurrentPhase(pontos) {
+    for (let i = 0; i < pontosParaNovaFase.length; i++) {
+      if (pontos < pontosParaNovaFase[i]) {
+        return i;
+      }
+    }
+    // Se ultrapassar todos os limites, está na última fase
+    return pontosParaNovaFase.length;
 }
   
 window.onload = (event) => main()
