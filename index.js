@@ -1,29 +1,30 @@
 /* vars 
 - canvas : tela
-- ctx : contexto
-- ALTURA
-- LARGURA
+- ctx : context
+- HEIGHT
+- WIDTH
 - frames : taxa de quadros
 */
-var canvas, ctx, ALTURA, LARGURA,  estadoAtual, recorde, img, altBloco,
+var canvas, ctx, HEIGHT, WIDTH, GAME_STATE, hightscores, tile, obstacleHeight,
 
-maxPulos = 3, 
-velocidade = 8,
-gravidade = 1.567,
-forcaDoPulo = 27,
-vidasInicial = 5,
-faseAtual = 0,
-// forcaDoPulo: 23.6,
+maxJumps = 3, 
+speedBase = 8,
+gravity = 1.567,
+jumpStrength = 27,
+startLifes = 5,
+currentPhase = 0,
+// jumpStrength: 23.6,
 
-pontosParaNovaFase = [15, 30, 50, 80, 120, 150, 190, 250, 400, 500, 750, 1000, 1250, 1500, 2000, 2500, 3500],
+phasePointsEvolution = [15, 30, 50, 80, 120, 150, 190, 250, 400, 500, 750, 1000, 1250, 1500, 2000, 2500, 3500],
 
-labelNovaFase = {
-    texto: "",
-    opacidade: 0.0,
+//Texto de "Nova fase" aparece quando se passa de fase
+newPhaseLabel = {
+    text: "",
+    opacity: 0.0,
     fadeIn: function(dt){
         var fadeInId = setInterval(function() {
-            if(labelNovaFase.opacidade < 1.0){
-                labelNovaFase.opacidade += 0.01;
+            if(newPhaseLabel.opacity < 1.0){
+                newPhaseLabel.opacity += 0.01;
             }else{
                 clearInterval(fadeInId);
             }
@@ -31,8 +32,8 @@ labelNovaFase = {
     },
     fadeOut: function(dt){
         var fadeOutId = setInterval(function() {
-            if(labelNovaFase.opacidade > 0.0){
-                labelNovaFase.opacidade -= 0.01;
+            if(newPhaseLabel.opacity > 0.0){
+                newPhaseLabel.opacity -= 0.01;
             }else{
                 clearInterval(fadeOutId);
             }
@@ -40,56 +41,59 @@ labelNovaFase = {
     }
 },
 
-estados = {
-    jogar: 0,
-    jogando: 1,
-    perdeu: 2
+//Estados do jogo, para preparação de telas e transição de cenários
+game_states = {
+    play: 0,
+    playing: 1,
+    loose: 2
 },
 
-chao = {
+//Entidade do chão da fase
+ground = {
     y: 550,
     x: 0,
-    altura: 50,
-    atualiza: function(){
-        this.x -= velocidade;
-        if(this.x <= -40){
-            this.x += 36;
+    height: 50,
+    update: function(){
+        this.x -= speedBase;
+        if(this.x <= -36.3){
+            this.x += 36.3;
         }
     },
-    desenha: function () {
-        spriteChao.desenha(this.x, this.y);
-        spriteChao.desenha(this.x + spriteChao.largura, this.y);
+    draw: function () {
+        spriteGround.draw(this.x, this.y);
+        spriteGround.draw(this.x + spriteGround.width, this.y);
     }
 },                
 
-bloco = {
+//Player
+player = {
     x: 50,
     y: 0,
-    altura: spriteBoneco.altura,
-    largura: spriteBoneco.largura,
-    gravidade: gravidade,
-    forcaDoPulo: forcaDoPulo,
-    vidas: vidasInicial,
-    velocidade: 0,
-    quantPulos: 0,
+    height: spritePlayer.height,
+    width: spritePlayer.width,
+    gravity: gravity,
+    jumpStrength: jumpStrength,
+    lifes: startLifes,
+    speed: 0,
+    maxJumps: 0,
     score: 0,
-    rotacao: 0,
-    colidindo: false,
-    atualiza: function () {
-        this.velocidade += this.gravidade;
-        this.y += this.velocidade;
-        this.rotacao += Math.PI / 180 * velocidade;
+    rotation: 0,
+    colliding: false,
+    update: function () {
+        this.speed += this.gravity;
+        this.y += this.speed;
+        this.rotation += Math.PI / 180 * speedBase;
 
-        if (this.y > chao.y - this.altura && estadoAtual != estados.perdeu) {
-            this.y = chao.y - this.altura;
-            this.quantPulos = 0;
-            this.velocidade = 0;
+        if (this.y > ground.y - this.height && GAME_STATE != game_states.loose) {
+            this.y = ground.y - this.height;
+            this.maxJumps = 0;
+            this.speed = 0;
         }
     },
-    pula: function (sound = true) {
-        if (this.quantPulos < maxPulos) {
-            this.velocidade = -this.forcaDoPulo;
-            this.quantPulos++;
+    jump: function (sound = true) {
+        if (this.maxJumps < maxJumps) {
+            this.speed = -this.jumpStrength;
+            this.maxJumps++;
 
             //--------------------------------------------
             if(sound){
@@ -100,258 +104,248 @@ bloco = {
         }
     },
     reset: function () {
-        this.velocidade = 0;
+        this.speed = 0;
         this.y = 0;
 
-        if (this.score > recorde) {
-            localStorage.setItem("recorde", this.score);
-            recorde = this.score;
+        if (this.score > hightscores) {
+            localStorage.setItem("hightscores", this.score);
+            hightscores = this.score;
         }
 
-        this.vidas = vidasInicial;
+        this.lifes = startLifes;
         this.score = 0;
 
-        velocidade = 8;
-        this.gravidade = 1.567;
-        faseAtual = 0;
+        speedBase = 8;
+        this.gravity = 1.567;
+        currentPhase = 0;
     },
-    desenha: function () {
+    draw: function () {
+        
+        ctx.save();
 
         var sprite;
 
-        if(faseAtual <= 4){
-            sprite = spriteBoneco;
+        if(currentPhase <= 4){
+            sprite = spritePlayer;
         }else{
-            sprite = spriteCheirado;                            
+            ctx.shadowColor = 'yellow'
+            ctx.shadowBlur = 50
+            sprite = spritePlayerBoosted;                            
         }
 
-        if(this.colidindo == true){
-            sprite = spriteBonecoDano;
+        if(this.colliding == true){
+            sprite = spritePlayerHit;
         }
-
-        ctx.save();
+        
         //Operações para Rotacionar
-        ctx.translate(this.x + sprite.largura/2, this.y + sprite.altura/2);
-        ctx.rotate(this.rotacao);
-        sprite.desenha(-sprite.largura/2, -sprite.altura/2);                        
+        ctx.translate(this.x + sprite.width/2, this.y + sprite.height/2);
+        ctx.rotate(this.rotation);
+        
+        sprite.draw(-sprite.width/2, -sprite.height/2);                        
         ctx.restore();
 
 
         // // Desenha a bolinha no canvas
         // ctx.beginPath();
         // //Ponto alto frente
-        // ctx.arc((this.x + this.largura), this.y, 5, 0, 2 * Math.PI);
+        // ctx.arc((this.x + this.width), this.y, 5, 0, 2 * Math.PI);
         // //Ponto baixo frente
-        // ctx.arc((this.x + this.largura), this.y + this.altura, 5, 0, 2 * Math.PI);
+        // ctx.arc((this.x + this.width), this.y + this.height, 5, 0, 2 * Math.PI);
         // //Ponto alto traseiro
         // ctx.arc((this.x), this.y, 5, 0, 2 * Math.PI);
         // //Ponto baixo traseiro
-        // ctx.arc((this.x), this.y + this.altura, 5, 0, 2 * Math.PI);
+        // ctx.arc((this.x), this.y + this.height, 5, 0, 2 * Math.PI);
         // ctx.fillStyle = "red"; // Cor de preenchimento da bolinha
         // ctx.fill();
         // ctx.closePath();
     },
-    colidiu: function () {
-        bloco.colidindo = true;
+    collided: function () {
+        player.colliding = true;
 
         setTimeout(function(){
-            bloco.colidindo = false;
+            player.colliding = false;
         }, 500);
 
         playSound('sounds/hit.mp3')
 
-        if(bloco.vidas >=1){
-            bloco.vidas--;
+        if(player.lifes >=1){
+            player.lifes--;
         }else{
-            estadoAtual = estados.perdeu;
-            sons.music.pause()
+            GAME_STATE = game_states.loose;
+            sounds.music.pause()
             playSound('sounds/loose.mp3')
         }
     },
-    pontua: function (entity, qtdePT = 1) {
+    scored: function (entity, qtdePT = 1) {
         entity._scored = true
-
         this.score+=qtdePT;
-
         let phasePoints = findCurrentPhase(this.score)
 
-        if(faseAtual != phasePoints){
-            passarDeFase();
+        if(currentPhase != phasePoints){
+            passOfPhase();
         }
-
-        //console.log(findCurrentPhase(this.score))
-
-
-        // if(faseAtual < pontosParaNovaFase.length 
-        // && this.score == pontosParaNovaFase[faseAtual]){
-        //     passarDeFase();
-        // }
     },
-    ganhaVida: function (life) {
+    upLife: function (life) {
         if(!life._scored){
             playSound('sounds/took_life.mp3')
-            bloco.vidas++
+            player.lifes++
         }
     }
 },
 
-obstaculos = {
+//Obstáculos
+obstacles = {
     _obs: [],
     _scored: false,
     _sprites: [
-        obstaculoAzul,
-        obstaculoVerde,
-        obstaculoVermelho,
-        obstaculoAmarelo,
-        obstaculoRoxo,
-        obstaculoMarrom,
-        obstaculoCinza
+        spriteObstacle1,
+        spriteObstacle2,
+        spriteObstacle3,
+        spriteObstacle4,
+        spriteObstacle5,
+        spriteObstacle6,
+        spriteObstacle7
     ],
-    tempoInsercao: 0,
-    insere: function () {
+    insertionTime: 0,
+    insert: function () {
 
-        if(faseAtual <= 4){
-            altBloco = 100;
-        }else if (altBloco > 4){
-            altBloco = 200;
+        if(currentPhase <= 4){
+            obstacleHeight = 100;
+        }else if (obstacleHeight > 4){
+            obstacleHeight = 260;
         }
 
         this._obs.push({
-            x: LARGURA, 
-            y: chao.y - Math.floor(20 + Math.random() * altBloco),                           
-            largura: 50,
+            x: WIDTH, 
+            y: ground.y - Math.floor(20 + Math.random() * obstacleHeight),                           
+            width: 50,
             sprite: this._sprites[Math.floor(this._sprites.length * Math.random())]
         });
 
-        this.tempoInsercao = 30 + Math.floor(60 * Math.random());
+        this.insertionTime = 30 + Math.floor(60 * Math.random());
     },
-    atualiza: function () {
+    update: function () {
 
-        if (this.tempoInsercao == 0) {
-            this.insere();
+        if (this.insertionTime == 0) {
+            this.insert();
         } else {
-            this.tempoInsercao--;
+            this.insertionTime--;
         }
 
         for (var i = 0, tam = this._obs.length; i < tam; i++) {
             var obs = this._obs[i];
 
-            obs.x -= velocidade;
+            obs.x -= speedBase;
             if (
-                !bloco.colidindo
-                && bloco.x < obs.x + obs.largura
-                && bloco.x + bloco.largura >= obs.x
-                && bloco.y + bloco.altura >= obs.y
+                !player.colliding
+                && player.x < obs.x + obs.width
+                && player.x + player.width >= obs.x
+                && player.y + player.height >= obs.y
             ) {
-                
-                bloco.colidiu()
-
+                player.collided()
             } else if (obs.x <= 0 && !obs._scored) {
-
-                bloco.pontua(obs)
-                // bloco.score++;
-                // obs._scored = true;  
-
-                // if(faseAtual < pontosParaNovaFase.length 
-                // && bloco.score == pontosParaNovaFase[faseAtual]){
-                //     passarDeFase();
-                // }
-
-            } else if (obs.x <= -obs.largura) {
+                player.scored(obs)
+            } else if (obs.x <= -obs.width) {
                 this._obs.splice(i, 1);
                 tam--;
                 i--;
             }
         }
     },
-    limpa: function () {
+    reset: function () {
         this._obs = [];
     },
-    desenha: function () {
+    draw: function () {
         for (var i = 0, tam = this._obs.length; i < tam; i++) {
             var obs = this._obs[i];
-            obs.sprite.desenha(obs.x, obs.y);
+            obs.sprite.draw(obs.x, obs.y);
         }
     }
 },
 
-voadores = {
+//Voadores
+flying = {
     _fly: [],
     _sprites: [
-        voador1,
+        spriteFlying1,
+        spriteFlying2,
+        spriteFlying3,
+        spriteFlying4,
+        spriteFlying5,
     ],
-    _brokenSprites: {
-        voador1Quebrado
-    },
+    _brokenSprites: [
+        spriteFlying1Damaged,
+        spriteFlying2Damaged,
+        spriteFlying3Damaged,
+        spriteFlying4Damaged,
+        spriteFlying5Damaged,
+    ],
     _scored: false,
-    tempoInsercao: 0,
-    insere: function () {
+    insertionTime: 0,
+    insert: function () {
+
+        const index = Math.floor(this._sprites.length * Math.random())
+        const sprite = this._sprites[index]
 
         this._fly.push({
-            x: LARGURA, 
-            y: chao.y - Math.floor(250 + Math.random() * 200),                           
-            largura: voador1.largura,
-            altura: voador1.altura,
-            sprite: this._sprites[Math.floor(this._sprites.length * Math.random())]
+            x: WIDTH, 
+            y: ground.y - Math.floor(250 + Math.random() * 200),                           
+            width: sprite.width,
+            height: sprite.height,
+            sprite,
+            index
         });
 
-        this.tempoInsercao = 30 + Math.floor(800 * Math.random());
+        this.insertionTime = 30 + Math.floor(800 * Math.random());
     },
-    atualiza: function () {
+    update: function () {
 
-        if (this.tempoInsercao == 0) {
-            this.insere();
+        if (this.insertionTime == 0) {
+            this.insert();
 
             //--------------------------------------------
             playSound('sounds/plane.mp3')
             //--------------------------------------------
 
         } else {
-            this.tempoInsercao--;
+            this.insertionTime--;
         }
 
         for (var i = 0, tam = this._fly.length; i < tam; i++) {
             var fly = this._fly[i];
-            fly.x -= velocidade;
+            fly.x -= speedBase;
 
             // Verificar colisão com o voador
             if (
-            !bloco.colidindo
+            !player.colliding
             && fly.x > -100
-            && bloco.x + bloco.largura >= fly.x 
-            && bloco.x <= fly.x
-            && bloco.y + (bloco.altura/2) >= fly.y 
-            && bloco.y <= fly.y + fly.altura) {
+            && player.x + player.width >= fly.x 
+            && player.x <= fly.x
+            && player.y + (player.height/2) >= fly.y 
+            && player.y <= fly.y + fly.height) {
                 // Colisão na frente do fly
                 //console.log(`Colidiu com voador ${i}`)
-                if(faseAtual < 5){
-                    bloco.colidiu()
+                if(currentPhase < 5){
+                    player.collided()
                 }
-                if(!bloco.colidindo){
-                    this.destroi(fly)
+                if(!player.colliding){
+                    this.destroy(fly)
                 }
                 
             }
 
 
-            if (!bloco.colidindo 
-            && bloco.x + bloco.largura >= fly.x 
-            && bloco.x <= fly.x + fly.largura 
-            && bloco.y <= fly.y 
-            && bloco.y + bloco.altura >= fly.y) {
-                // Colisão no topo do fly
-                //console.log('colisão no topo')
-                
+            if (!player.colliding 
+            && player.x + player.width >= fly.x 
+            && player.x <= fly.x + fly.width 
+            && player.y <= fly.y 
+            && player.y + player.height >= fly.y) {
+              
                 if(!fly._scored){
-                    bloco.pontua(fly, 5)
+                    player.scored(fly, 5)
                 }
-                this.destroi(fly)
-                
-                // if(faseAtual < pontosParaNovaFase.length 
-                // && bloco.score == pontosParaNovaFase[faseAtual]){
-                //     passarDeFase();
-                // }
-                //console.log(`O personagem está no nível ${nivelAtual}`);
+                this.destroy(fly)
+
             }
 
             if (fly._scored && fly.x <= -100) {
@@ -361,23 +355,25 @@ voadores = {
             }
         }
     },
-    limpa: function () {
+    reset: function () {
         this._fly = [];
     },
-    desenha: function () {
+    draw: function () {
         for (var i = 0, tam = this._fly.length; i < tam; i++) {
             var fly = this._fly[i];
-            fly.sprite.desenha(fly.x, fly.y);
+            fly.sprite.draw(fly.x, fly.y);
         }
     },
-    destroi: function (fly) {
+    destroy: function (fly) {
 
         playSound('sounds/explosion.mp3')
 
-        bloco.pula(false)
-        bloco.quantPulos = 0
-        fly.sprite = this._brokenSprites['voador1Quebrado']
-        fly.velocidade++
+        let sprite =  this._brokenSprites[fly.index]
+
+        player.jump(false)
+        player.maxJumps = 0
+        fly.sprite = sprite
+        fly.speed++
 
         setInterval(() => {
             if(fly.y <= 500){
@@ -387,59 +383,60 @@ voadores = {
     }
 },
 
-vida = {
+//Item de Vida
+life = {
     _lifes: [],
-    sprite: vidaSPR,
+    sprite: spriteLife1,
     _scored: false,
-    tempoInsercao: 9,
-    insere: function () {
+    insertionTime: 9,
+    insert: function () {
         this._lifes.push({
-            x: LARGURA, 
-            y: chao.y - Math.floor(250 + Math.random() * 200),                           
-            largura: vidaSPR.largura,
-            altura: vidaSPR.altura,
-            sprite: vidaSPR
+            x: WIDTH, 
+            y: ground.y - Math.floor(250 + Math.random() * 200),                           
+            width: spriteLife1.width,
+            height: spriteLife1.height,
+            sprite: this.sprite
         });
 
-        this.tempoInsercao = 500 + Math.floor(800 * Math.random());
+        this.insertionTime = 500 + Math.floor(800 * Math.random());
     },
-    atualiza: function () {
+    update: function () {
 
-        if (this.tempoInsercao == 0) {
-            this.insere();
+        if (this.insertionTime == 0) {
+            this.insert();
 
             //--------------------------------------------
             playSound('sounds/life_spawn.mp3')
             //--------------------------------------------
 
         } else {
-            this.tempoInsercao--;
+            this.insertionTime--;
         }
 
         for (var i = 0, tam = this._lifes.length; i < tam; i++) {
             var life = this._lifes[i];
-            life.x -= velocidade;
+            life.x -= speedBase;
 
             if (
-                (bloco.x + bloco.largura) > life.x
-                && (bloco.x + bloco.largura) < (life.x + life.largura)
-                && (bloco.y + bloco.altura) > life.y
-                && (bloco.y + bloco.altura) < (life.y + life.altura)
+                (player.x + player.width) > life.x
+                && (player.x + player.width) < (life.x + life.width)
+                && (player.y + player.height) > life.y
+                && (player.y + player.height) < (life.y + life.height)
             ) {
                 // Ganha Vida
-                bloco.ganhaVida(life)
+                player.upLife(life)
                 life._scored = true
 
-                life.sprite = vida2SPR
+                life.sprite = spriteLife2
 
                 setTimeout(() => {
-                    life.sprite = vida3SPR
+                    life.sprite = spriteLife3
                 }, 100);
                 setTimeout(() => {
-                    life.sprite = vida4SPR
+                    life.sprite = spriteLife4
                 }, 200);
                 setTimeout(() => {
-                    life.sprite = vida5SPR
+                    life.sprite = spriteLife5
                 }, 300);
 
                 setTimeout(() => {
@@ -457,18 +454,19 @@ vida = {
             }
         }
     },
-    limpa: function () {
+    reset: function () {
         this._lifes = [];
     },
-    desenha: function () {
+    draw: function () {
         for (var i = 0, tam = this._lifes.length; i < tam; i++) {
             var life = this._lifes[i];
-            life.sprite.desenha(life.x, life.y);
+            life.sprite.draw(life.x, life.y);
         }
     },
 }
 
-sons = {
+//Arquivos de Som
+sounds = {
     lobby: new Audio('sounds/lobby.mp3'),
     start_game: new Audio('sounds/start_game.mp3'),
     music: new Audio('sounds/music.mp3'),
@@ -483,159 +481,167 @@ sons = {
 }
 
 function main(){
-    document.getElementById('btn').addEventListener('click', () => {
-        loadGame()
-    })
+    loadGame()
 }
 
 function loadGame(){
     
     //--------------------------------------------
-    sons.lobby.volume = 0.4
-    sons.lobby.play()
+    sounds.lobby.volume = 0.4
+    sounds.lobby.play()
     //--------------------------------------------
 
-    localStorage.removeItem("recorde");
+    //localStorage.removeItem("hightscores");
 
-    ALTURA = window.innerHeight;
-    LARGURA = window.innerWidth;
+    HEIGHT = window.innerHeight;
+    WIDTH = window.innerWidth;
 
-    if (LARGURA >= 500) {
-        LARGURA = 800;
-        ALTURA = 600;
+    if (WIDTH >= 500) {
+        WIDTH = 800;
+        HEIGHT = 600;
     }
 
     canvas = document.createElement("canvas");
-    canvas.width = LARGURA;
-    canvas.height = ALTURA;
+    canvas.width = WIDTH;
+    canvas.height = HEIGHT;
     canvas.style.border = "1px solid";
+    canvas.style.borderRadius = "5px";
 
     ctx = canvas.getContext("2d");
 
     document.body.appendChild(canvas);
-    document.addEventListener("mousedown", clique);
+    document.addEventListener("mousedown", click);
 
-    estadoAtual = estados.jogar;
-    recorde = localStorage.getItem("recorde");
+    GAME_STATE = game_states.play;
+    hightscores = localStorage.getItem("hightscores");
 
-    if (recorde == null) {
-        recorde = 0;
+    if (hightscores == null) {
+        hightscores = 0;
     }
 
-    img = new Image();
-    img.src = "imgs/sheet.png";
+    tile = new Image();
+    tile.src = "imgs/sheet.png";
 
     loop();
 }
 
 function loop() {
 
-    atualiza();
-    desenha();
+    update();
+    draw();
 
     window.requestAnimationFrame(loop);
 }
 
-function atualiza() {
-    chao.atualiza();
-    bloco.atualiza();
+function update() {
+    ground.update();
+    player.update();
 
-    //console.log(bloco.colidindo)
-
-    if (estadoAtual == estados.jogando) {
-        obstaculos.atualiza();
-        voadores.atualiza();
-        vida.atualiza();
+    if (GAME_STATE == game_states.playing) {
+        obstacles.update();
+        flying.update();
+        life.update();
     } 
 }
 
-function desenha() {
+function draw() {
 
-    bg.desenha(0,0); 
+    bg.draw(0,0); 
 
-    drawHudText(`Pontos: ${bloco.score}`, 25, 68)
-    drawHudText(`Vidas: ${bloco.vidas}`, 580, 68)
-    drawHudText(labelNovaFase.texto, 0, 0, labelNovaFase.opacidade, true)
+    drawHudText(
+        `Pontos: ${player.score}`, 
+        25, 
+        68
+    )
+    drawHudText(
+        `Vidas: ${player.lifes}`, 
+        580, 
+        68
+    )
+    drawHudText(
+        newPhaseLabel.text, 
+        0, 
+        0, 
+        newPhaseLabel.opacity, 
+        true, 
+        '255, 238, 0',
+        '84, 84, 84',
+        '700 80px'
+    )
 
-    if(estadoAtual == estados.jogando){
-        obstaculos.desenha();
-        voadores.desenha();
-        vida.desenha();
+    if(GAME_STATE == game_states.playing){
+        obstacles.draw();
+        flying.draw();
+        life.draw();
     }
 
-    chao.desenha();               
-    bloco.desenha();                 
-
-    if(estadoAtual == estados.jogar){
-        jogar.desenha(LARGURA / 2 - jogar.largura/2, ALTURA / 2 - jogar.altura/2)
+    if(GAME_STATE == game_states.play){
+        spritePlay.draw(WIDTH / 2 - spritePlay.width/2, HEIGHT / 2 - spritePlay.height/2)
     }
 
-    if(estadoAtual == estados.perdeu){
-        perdeu.desenha(LARGURA / 2 - perdeu.largura/2, ALTURA / 2 - perdeu.altura/2 - spriteRecorde.altura/2);
-
-        spriteRecorde.desenha(LARGURA / 2 - spriteRecorde.largura/2, ALTURA / 2 + perdeu.altura/2 - spriteRecorde.altura/2);
+    if(GAME_STATE == game_states.loose){
+        spriteLoose.draw(WIDTH / 2 - spriteLoose.width/2, HEIGHT / 2 - spriteLoose.height/2 - spriteHighscore.height/2);
     
-        // ctx.fillText(bloco.score, 450, 380);
-        drawHudText(bloco.score, 450, 380)
+        drawHudText(player.score, 410, 310)
         
-        if(bloco.score > recorde){
-            novo.desenha(LARGURA / 2 - 130, ALTURA / 2 + 10);
-            // ctx.fillText(bloco.score, 460, 480);
-            drawHudText(bloco.score, 460, 480)
-        }else{
-            // ctx.fillText(recorde, 460, 480);
-            drawHudText(recorde, 460, 480)
+        if(player.score > parseInt(hightscores)){
+            spriteHighscore.draw(WIDTH / 2 - spriteHighscore.width/2, HEIGHT / 2 + spriteLoose.height/2 - spriteHighscore.height/2-83);
+            drawHudText(player.score, 360, 400)
         }
     }
+
+    ground.draw();               
+    player.draw();
 }
 
-function passarDeFase(fase = null){
+function passOfPhase(phase = null){
 
     //--------------------------------------------
     playSound('sounds/phase_advanced.mp3')
     //--------------------------------------------
 
-    velocidade++;
-    fase ? faseAtual = fase : faseAtual++;
-    bloco.vidas++;
+    speedBase++;
+    phase ? currentPhase = phase : currentPhase++;
+    player.lifes++;
 
-    if(faseAtual == 5){
-        bloco.gravidade *= 0.6;
+    if(currentPhase == 5){
+        playSound('sounds/boost_player.mp3')
+        player.gravity *= 0.6;
     }
 
-    labelNovaFase.texto = "Level " + faseAtual;
-    labelNovaFase.fadeIn(0.4);
+    newPhaseLabel.text = "Level " + currentPhase;
+    newPhaseLabel.fadeIn(0.4);
 
     setTimeout(function() {
-        labelNovaFase.fadeOut(0.4);
+        newPhaseLabel.fadeOut(0.4);
     }, 800);
     
 }
 
-function clique() {
-    if (estadoAtual == estados.jogando) {
-        bloco.pula();
-    } else if (estadoAtual == estados.jogar) {
+function click() {
+    if (GAME_STATE == game_states.playing) {
+        player.jump();
+    } else if (GAME_STATE == game_states.play) {
 
         //--------------------------------------------
-        sons.lobby.pause()
+        sounds.lobby.pause()
         playSound('sounds/start_game.mp3')
-        sons.music.play()
-        sons.music.addEventListener('ended', () => {
-            sons.music.play();
+        sounds.music.play()
+        sounds.music.addEventListener('ended', () => {
+            sounds.music.play();
         })
         //--------------------------------------------
 
-        estadoAtual = estados.jogando;
-    } else if (estadoAtual == estados.perdeu && bloco.y >= 2 * ALTURA) {
+        GAME_STATE = game_states.playing;
+    } else if (GAME_STATE == game_states.loose && player.y >= 2 * HEIGHT) {
 
         //--------------------------------------------
-        sons.lobby.play()
+        sounds.lobby.play()
         //--------------------------------------------
 
-        estadoAtual = estados.jogar;
-        obstaculos.limpa();
-        bloco.reset();
+        GAME_STATE = game_states.play;
+        obstacles.reset();
+        player.reset();
     }
     
 }
@@ -650,14 +656,23 @@ function playSound(path, volume = null){
     sound.play()
 }
 
-function drawHudText(text, x, y, opacity = 1, middle = false){
-    // Salvar o estado atual do contexto
+function drawHudText(
+    text, 
+    x, 
+    y, 
+    opacity = 1, 
+    middle = false, 
+    color = '241, 241, 241', 
+    strokeColor = '84, 84, 84',
+    fontSize = '600 50px'
+){
+    // Salvar o estado atual do context
     ctx.save();
 
-    ctx.strokeStyle = `rgba(84, 84, 84, ${opacity})`;
+    ctx.strokeStyle = `rgba(${strokeColor}, ${opacity})`;
+    ctx.fillStyle = `rgba(${color}, ${opacity})`;
+    ctx.font = `${fontSize} Arial`;
     ctx.lineWidth = 1;
-    ctx.font = "50px Arial";
-    ctx.fillStyle = `rgba(241, 241, 241, ${opacity})`;
 
     if(middle){
         ctx.fillText(text, canvas.width/2 - ctx.measureText(text).width/2, canvas.height/3);
@@ -666,22 +681,19 @@ function drawHudText(text, x, y, opacity = 1, middle = false){
         ctx.fillText(text, x, y);
         ctx.strokeText(text, x, y);
     }
-    
-    
 
-    // Restaurar o estado do contexto
+    // Restaurar o estado do context
     ctx.restore();
 }
 
-
 function findCurrentPhase(pontos) {
-    for (let i = 0; i < pontosParaNovaFase.length; i++) {
-      if (pontos < pontosParaNovaFase[i]) {
+    for (let i = 0; i < phasePointsEvolution.length; i++) {
+      if (pontos < phasePointsEvolution[i]) {
         return i;
       }
     }
     // Se ultrapassar todos os limites, está na última fase
-    return pontosParaNovaFase.length;
+    return phasePointsEvolution.length;
 }
   
 window.onload = (event) => main()

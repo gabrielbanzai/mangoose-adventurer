@@ -1,46 +1,53 @@
-function Sprite(x, y, largura, altura) {
+function Sprite(x, y, width, height) {
     this.x = x;
     this.y = y;
-    this.largura = largura;
-    this.altura = altura;
+    this.width = width;
+    this.height = height;
 
-    this.desenha = function (xCanvas, yCanvas) {
+    this.draw = function (xCanvas, yCanvas) {
         ctx.drawImage(
-            img, //Imagem a ser carregada
+            tile, //Imagem a ser carregada
             this.x, //Desenhar a partir de x
             this.y, //Desenhar a partir de y
-            this.largura, //Desenhar até Largura total
-            this.altura, //Desenhar até Altura total
+            this.width, //Desenhar até Largura total
+            this.height, //Desenhar até Altura total
             xCanvas, //X que queremos desenhar na Canvas
             yCanvas, //Y que queremos desenhar na Canvas
-            this.largura, //Escala X
-            this.altura //Escala Y
+            this.width, //Escala X
+            this.height //Escala Y
         );
     }
 }
 
 var bg = new Sprite(0, 0, 800, 600), 
-spriteBoneco = new Sprite(980, 7, 104, 104),
-spriteCheirado = new Sprite(1215, 23, 126, 126),
-spriteBonecoDano = new Sprite(845, 8, 104, 104),
-spritePoder1 = new Sprite(12, 1056, 130, 109),
-spritePoder2 = new Sprite(169, 1049, 140, 124),
-perdeu = new Sprite(944, 432, 266, 324),
-jogar = new Sprite(897, 128, 292, 250),
-novo = new Sprite(76, 761, 254, 115),
-spriteRecorde = new Sprite(79, 892, 310, 92),
-spriteChao = new Sprite(0, 607, 800, 85),
-obstaculoAzul = new Sprite(578, 967, 50, 220);
-obstaculoVerde = new Sprite(642, 967, 50, 220);
-obstaculoVermelho = new Sprite(768, 967, 50, 220);
-obstaculoAmarelo = new Sprite(705, 967, 50, 220);
-obstaculoRoxo = new Sprite(832, 967, 50, 220);
-obstaculoMarrom = new Sprite(895, 967, 50, 220);
-obstaculoCinza = new Sprite(958, 967, 50, 220);
-voador1 = new Sprite(12, 1127, 191, 60);
-voador1Quebrado = new Sprite(12, 1000, 230, 95);
-vidaSPR = new Sprite(587, 780, 72, 70);
-vida2SPR = new Sprite(677, 779, 81, 76);
-vida3SPR = new Sprite(774, 782, 94, 76);
-vida4SPR = new Sprite(902, 781, 91, 77);
-vida5SPR = new Sprite(1007, 779, 103, 85);
+spriteGround = new Sprite(0, 599, 800, 99),
+spriteNewGame = new Sprite(76, 761, 254, 115),
+spritePlay = new Sprite(6, 708, 388, 332),
+spriteLoose = new Sprite(510, 762, 195, 236),
+spriteHighscore = new Sprite(808, 823, 195, 171),
+spritePlayer = new Sprite(800, 0, 104, 104),
+spritePlayerHit = new Sprite(904, 0, 104, 104),
+spritePlayerBoosted = new Sprite(1008, 0, 104, 104),
+spritePlayerBoostedCover = new Sprite(1124, 0, 200, 200),
+spriteObstacle1 = new Sprite(800, 200, 50, 400);
+spriteObstacle2 = new Sprite(850, 200, 50, 400);
+spriteObstacle3 = new Sprite(900, 200, 50, 400);
+spriteObstacle4 = new Sprite(950, 200, 50, 400);
+spriteObstacle5 = new Sprite(1000, 200, 50, 400);
+spriteObstacle6 = new Sprite(1050, 200, 50, 400);
+spriteObstacle7 = new Sprite(1100, 200, 50, 400);
+spriteFlying1 = new Sprite(20, 1130, 191, 60);
+spriteFlying1Damaged = new Sprite(300, 1080, 250, 130);
+spriteFlying2 = new Sprite(20, 1340, 191, 60);
+spriteFlying2Damaged = new Sprite(300, 1275, 250, 130);
+spriteFlying3 = new Sprite(20, 1530, 191, 60);
+spriteFlying3Damaged = new Sprite(300, 1470, 250, 130);
+spriteFlying4 = new Sprite(20, 1730, 191, 60);
+spriteFlying4Damaged = new Sprite(300, 1690, 250, 130);
+spriteFlying5 = new Sprite(20, 1920, 191, 60);
+spriteFlying5Damaged = new Sprite(300, 1890, 250, 130);
+spriteLife1 = new Sprite(1120, 670, 70, 70);
+spriteLife2 = new Sprite(1120, 770, 78, 76);
+spriteLife3 = new Sprite(1120, 880, 91, 76);
+spriteLife4 = new Sprite(1120, 1000, 88, 76);
+spriteLife5 = new Sprite(1120, 1120, 98, 85);
