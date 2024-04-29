@@ -97,7 +97,7 @@ player = {
 
             //--------------------------------------------
             if(sound){
-                playSound('sounds/jump.mp3', 0.7)
+                playSound('sounds/jump.mp3', 0.182)
             }
             //--------------------------------------------
 
@@ -166,14 +166,14 @@ player = {
             player.colliding = false;
         }, 500);
 
-        playSound('sounds/hit.mp3')
+        playSound('sounds/hit.mp3', 0.3)
 
         if(player.lifes >=1){
             player.lifes--;
         }else{
             GAME_STATE = game_states.loose;
             sounds.music.pause()
-            playSound('sounds/loose.mp3')
+            playSound('sounds/loose.mp3', 0.5)
         }
     },
     scored: function (entity, qtdePT = 1) {
@@ -187,7 +187,7 @@ player = {
     },
     upLife: function (life) {
         if(!life._scored){
-            playSound('sounds/took_life.mp3')
+            playSound('sounds/took_life.mp3', 0.3)
             player.lifes++
         }
     }
@@ -304,7 +304,7 @@ flying = {
             this.insert();
 
             //--------------------------------------------
-            playSound('sounds/plane.mp3')
+            playSound('sounds/plane.mp3', 0.32)
             //--------------------------------------------
 
         } else {
@@ -366,7 +366,7 @@ flying = {
     },
     destroy: function (fly) {
 
-        playSound('sounds/explosion.mp3')
+        playSound('sounds/explosion.mp3', 0.17)
 
         let sprite =  this._brokenSprites[fly.index]
 
@@ -406,7 +406,7 @@ life = {
             this.insert();
 
             //--------------------------------------------
-            playSound('sounds/life_spawn.mp3')
+            playSound('sounds/life_spawn.mp3', 0.32)
             //--------------------------------------------
 
         } else {
@@ -487,7 +487,7 @@ function main(){
 function loadGame(){
     
     //--------------------------------------------
-    sounds.lobby.volume = 0.4
+    sounds.lobby.volume = 0.1
     sounds.lobby.play()
     //--------------------------------------------
 
@@ -597,7 +597,7 @@ function draw() {
 function passOfPhase(phase = null){
 
     //--------------------------------------------
-    playSound('sounds/phase_advanced.mp3')
+    playSound('sounds/phase_advanced.mp3', 0.5)
     //--------------------------------------------
 
     speedBase++;
@@ -605,7 +605,7 @@ function passOfPhase(phase = null){
     player.lifes++;
 
     if(currentPhase == 5){
-        playSound('sounds/boost_player.mp3')
+        playSound('sounds/boost_player.mp3', 0.322)
         player.gravity *= 0.6;
     }
 
@@ -625,7 +625,8 @@ function click() {
 
         //--------------------------------------------
         sounds.lobby.pause()
-        playSound('sounds/start_game.mp3')
+        playSound('sounds/start_game.mp3', 0.4)
+        sounds.music.volume = 0.23
         sounds.music.play()
         sounds.music.addEventListener('ended', () => {
             sounds.music.play();
@@ -649,7 +650,7 @@ function click() {
 function playSound(path, volume = null){
     let sound = new Audio(path)
 
-    if(volume){
+    if(volume > 0.0){
         sound.volume = volume
     }
 
