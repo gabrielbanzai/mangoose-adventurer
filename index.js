@@ -9,14 +9,18 @@ var canvas, ctx, HEIGHT, WIDTH, GAME_STATE, hightscores, tile, obstacleHeight,
 
 maxJumps = 3, 
 speedBase = 8,
-gravity = 1.567,
+gravity = 1.500,
 jumpStrength = 27,
 startLifes = 5,
 currentPhase = 0,
 // jumpStrength: 23.6,
-musicSelected
+musicSelected,
+continuousSoundEffect,
 
 phasePointsEvolution = [15, 30, 50, 80, 120, 150, 190, 250, 400, 500, 750, 1000, 1250, 1500, 2000, 2500, 3500],
+
+BASE_WIDTH = 800;
+BASE_HEIGHT = 600;
 
 //Texto de "Nova fase" aparece quando se passa de fase
 newPhaseLabel = {
@@ -80,6 +84,8 @@ player = {
     score: 0,
     rotation: 0,
     colliding: false,
+    _boosted: false,
+    _invincible: false,
     update: function () {
         this.speed += this.gravity;
         this.y += this.speed;
@@ -98,7 +104,7 @@ player = {
 
             //--------------------------------------------
             if(sound){
-                playSound('sounds/jump.mp3', 0.182)
+                playSound('sounds/jump.mp3', 0.140)
             }
             //--------------------------------------------
 
@@ -126,16 +132,21 @@ player = {
 
         var sprite;
 
-        if(currentPhase <= 4){
-            sprite = spritePlayer;
-        }else{
+        if(player._boosted){
             ctx.shadowColor = 'yellow'
-            ctx.shadowBlur = 50
-            sprite = spritePlayerBoosted;                            
+            random = [0, 80]
+            setInterval(() => {
+                ctx.shadowBlur = random[Math.floor(Math.random() * random.length)]
+            }, 800);
+            sprite = spritePlayerBoosted;
+        }else{
+            sprite = spritePlayer;
         }
 
         if(this.colliding == true){
-            sprite = spritePlayerHit;
+            if(!player._invincible){
+                sprite = spritePlayerHit;
+            }
         }
         
         //Operações para Rotacionar
@@ -167,14 +178,18 @@ player = {
             player.colliding = false;
         }, 500);
 
-        playSound('sounds/hit.mp3', 0.3)
+        if(player._invincible){
+            return
+        }
+
+        playSound('sounds/hit.mp3', 0.05)
 
         if(player.lifes >=1){
             player.lifes--;
         }else{
             GAME_STATE = game_states.loose;
             sounds.music.pause()
-            playSound('sounds/loose.mp3', 0.5)
+            playSound('sounds/loose.mp3', 0.2)
         }
     },
     scored: function (entity, qtdePT = 1) {
@@ -183,7 +198,7 @@ player = {
         let phasePoints = findCurrentPhase(this.score)
 
         let scr = new Audio('sounds/scored.mp3')
-        scr.volume = 0.1
+        scr.volume = 0.04
         scr.play()
 
         if(currentPhase != phasePoints){
@@ -192,7 +207,7 @@ player = {
     },
     upLife: function (life) {
         if(!life._scored){
-            playSound('sounds/took_life.mp3', 0.3)
+            playSound('sounds/took_life.mp3', 0.2)
             player.lifes++
         }
     }
@@ -221,12 +236,13 @@ obstacles = {
         }
 
         this._obs.push({
-            x: 800, 
+            x: BASE_WIDTH, 
             y: ground.y - Math.floor(20 + Math.random() * obstacleHeight), 
             width: 50,
             sprite: this._sprites[Math.floor(this._sprites.length * Math.random())]
         });
 
+        // this.insertionTime = (30 + Math.floor(60 * Math.random()) / speedBase*10);
         this.insertionTime = 30 + Math.floor(60 * Math.random());
     },
     update: function () {
@@ -294,7 +310,7 @@ flying = {
         const sprite = this._sprites[index]
 
         this._fly.push({
-            x: 800, 
+            x: BASE_WIDTH, 
             y: ground.y - Math.floor(250 + Math.random() * 200),                           
             width: sprite.width,
             height: sprite.height,
@@ -304,7 +320,7 @@ flying = {
             _scored: false
         });
 
-        this.insertionTime = 30 + Math.floor(800 * Math.random());
+        this.insertionTime = 30 + Math.floor(600 * Math.random());
     },
     update: function () {
 
@@ -312,7 +328,7 @@ flying = {
             this.insert();
 
             //--------------------------------------------
-            playSound('sounds/plane.mp3', 0.32)
+            playSound('sounds/plane.mp3', 0.2)
             //--------------------------------------------
 
         } else {
@@ -381,7 +397,7 @@ flying = {
     },
     destroy: function (fly) {
 
-        playSound('sounds/explosion.mp3', 0.17)
+        playSound('sounds/explosion.mp3', 0.1)
 
         let sprite =  this._brokenSprites[fly.index]
         fly._destroyed = true;
@@ -408,7 +424,7 @@ life = {
     insertionTime: 9,
     insert: function () {
         this._lifes.push({
-            x: 800, 
+            x: BASE_WIDTH, 
             y: ground.y - Math.floor(250 + Math.random() * 200),                           
             width: spriteLife1.width,
             height: spriteLife1.height,
@@ -423,7 +439,7 @@ life = {
             this.insert();
 
             //--------------------------------------------
-            playSound('sounds/life_spawn.mp3', 0.32)
+            playSound('sounds/life_spawn.mp3', 0.2)
             //--------------------------------------------
 
         } else {
@@ -482,6 +498,111 @@ life = {
     },
 }
 
+//Item de Vida
+slow = {
+    _slows: [],
+    sprite: spriteLife1,
+    _scored: false,
+    insertionTime: 9,
+    insert: function () {
+        this._slows.push({
+            x: BASE_WIDTH, 
+            y: ground.y - Math.floor(250 + Math.random() * 200),                           
+            width: spriteLife1.width,
+            height: spriteLife1.height,
+            sprite: this.sprite
+        });
+
+        this.insertionTime = 600 + Math.floor(1000 * Math.random());
+    },
+    update: function () {
+
+        if (this.insertionTime == 0) {
+            this.insert();
+
+            //--------------------------------------------
+            //playSound('sounds/life_spawn.mp3', 0.2)
+            //--------------------------------------------
+
+        } else {
+            this.insertionTime--;
+        }
+
+        for (var i = 0, tam = this._slows.length; i < tam; i++) {
+            var slow = this._slows[i];
+            slow.x -= speedBase-5;
+
+            if (
+                (player.x + player.width) > slow.x
+                && (player.x + player.width) < (slow.x + slow.width)
+                && (player.y + player.height) > slow.y
+                && (player.y + player.height) < (slow.y + slow.height)
+            ) {
+                if(slow._scored){
+                    continue
+                }
+
+                musicSelected.pause()
+
+                slow.x -= speedBase
+
+                slow._scored = true
+                setTimeout(() => {
+                    slow._scored = false
+                }, 500)
+
+                playSound('sounds/slow.mp3', 0.2)
+
+                flying.insertionTime = (30 + Math.floor(600 * Math.random())) + 20;
+                obstacles.insertionTime = (40 + Math.floor(60 * Math.random())) + 20;
+                player.gravity = 0.8
+                speedBase = 4
+                setTimeout(() => {
+                    speedBase = 8 + currentPhase
+                    flying.insertionTime = (30 + Math.floor(600 * Math.random()))
+                    obstacles.insertionTime = 30 + Math.floor(60 * Math.random())
+                    player.gravity = 1.5
+                    musicSelected.play()
+                }, 5000);
+
+                slow.sprite = spriteLife2
+
+                setTimeout(() => {
+                    slow.sprite = spriteLife3
+                }, 100);
+                setTimeout(() => {
+                    slow.sprite = spriteLife4
+                }, 200);
+                setTimeout(() => {
+                    slow.sprite = spriteLife5
+                }, 300);
+
+                setTimeout(() => {
+                    this._slows.splice(i, 1);
+                    tam--;
+                    i--;
+                }, 400);
+
+                setTimeout(() => {
+                    this._slows.splice(i, 1);
+                    tam--;
+                    i--;
+                }, 500);
+            }
+
+        }
+    },
+    reset: function () {
+        this._slows = [];
+    },
+    draw: function () {
+        for (var i = 0, tam = this._slows.length; i < tam; i++) {
+            var slow = this._slows[i];
+            slow.sprite.draw(slow.x, slow.y);
+        }
+    },
+}
+
 //Arquivos de Som
 sounds = {
     lobby: new Audio('sounds/lobby.mp3'),
@@ -490,6 +611,9 @@ sounds = {
     music2: new Audio('sounds/music2.mp3'),
     music3: new Audio('sounds/music3.mp3'),
     music4: new Audio('sounds/music4.mp3'),
+    music_boosted: new Audio('sounds/music_boosted.mp3'),
+    boosted_effect: new Audio('sounds/boosted_effect.mp3'),
+    boosted_catch: new Audio('sounds/boosted_catch.mp3'),
     phase_advanced: new Audio('sounds/phase_advanced.mp3'),
     jump: new Audio('sounds/jump.mp3'),
     explosion: new Audio('sounds/explosion.mp3'),
@@ -498,6 +622,7 @@ sounds = {
     plane: new Audio('sounds/plane.mp3'),
     life_spawn: new Audio('sounds/life_spawn.mp3'),
     took_life: new Audio('sounds/took_life.mp3'),
+    slow: new Audio('sounds/slow.mp3'),
     scored: new Audio('sounds/scored.mp3'),
 }
 
@@ -508,7 +633,7 @@ function main(){
 function loadGame(){
     
     //--------------------------------------------
-    sounds.lobby.volume = 0.1
+    sounds.lobby.volume = 0.04
     sounds.lobby.play()
     //--------------------------------------------
 
@@ -519,9 +644,9 @@ function loadGame(){
     HEIGHT = window.innerHeight;
     WIDTH = window.innerWidth;
 
-    if (WIDTH >= 500) {
-        WIDTH = 800;
-        HEIGHT = 600;
+    if (WIDTH >= 800) {
+        WIDTH = BASE_WIDTH;
+        HEIGHT = BASE_HEIGHT;
     }
 
     canvas = document.createElement("canvas");
@@ -534,13 +659,13 @@ function loadGame(){
 
     document.body.appendChild(canvas);
 
-    scaleX = canvas.width / 800;
-    scaleY = canvas.height / 600;
+    scaleX = canvas.width / BASE_WIDTH;
+    scaleY = canvas.height / BASE_HEIGHT;
 
     ctx.scale(scaleX, scaleY);
 
     function resizeCanvas() {
-        const aspectRatio = 800 / 600;
+        const aspectRatio = BASE_WIDTH / BASE_HEIGHT;
 
         // Calcula o tamanho máximo possível mantendo a proporção
         let width = window.innerWidth;
@@ -562,6 +687,7 @@ function loadGame(){
     resizeCanvas();
 
     document.addEventListener("mousedown", click);
+    document.addEventListener("keydown", click);
 
     GAME_STATE = game_states.play;
     hightscores = localStorage.getItem("hightscores");
@@ -593,6 +719,7 @@ function update() {
         obstacles.update();
         flying.update();
         life.update();
+        // slow.update();
     } 
 }
 
@@ -603,12 +730,12 @@ function draw() {
     drawHudText(
         `Pontos: ${player.score}`, 
         25, 
-        68
+        42,
     )
     drawHudText(
         `Vidas: ${player.lifes}`, 
-        580, 
-        68
+        25, 
+        76
     )
     drawHudText(
         newPhaseLabel.text, 
@@ -625,19 +752,20 @@ function draw() {
         obstacles.draw();
         flying.draw();
         life.draw();
+        // slow.draw();
     }
 
     if(GAME_STATE == game_states.play){
-        spritePlay.draw(800 / 2 - spritePlay.width/2, 600 / 2 - spritePlay.height/2)
+        spritePlay.draw(BASE_WIDTH / 2 - spritePlay.width/2, BASE_HEIGHT / 2 - spritePlay.height/2)
     }
 
     if(GAME_STATE == game_states.loose){
-        spriteLoose.draw(800 / 2 - spriteLoose.width/2, 600 / 2 - spriteLoose.height/2 - spriteHighscore.height/2);
+        spriteLoose.draw(BASE_WIDTH / 2 - spriteLoose.width/2, BASE_HEIGHT / 2 - spriteLoose.height/2 - spriteHighscore.height/2);
     
         drawHudText(player.score, 410, 310)
         
         if(player.score > parseInt(hightscores)){
-            spriteHighscore.draw(800 / 2 - spriteHighscore.width/2, 600 / 2 + spriteLoose.height/2 - spriteHighscore.height/2-83);
+            spriteHighscore.draw(BASE_WIDTH / 2 - spriteHighscore.width/2, BASE_HEIGHT / 2 + spriteLoose.height/2 - spriteHighscore.height/2-83);
             drawHudText(player.score, 360, 400)
         }
     }
@@ -653,11 +781,29 @@ function passOfPhase(phase = null){
     //--------------------------------------------
 
     speedBase++;
+    // musicSelected.playbackRate+=0.1
     phase ? currentPhase = phase : currentPhase++;
     player.lifes++;
 
     if(currentPhase == 5){
-        playSound('sounds/boost_player.mp3', 0.322)
+        player._boosted = true
+        // playSound('sounds/boost_player.mp3', 0.322)
+        playSound('sounds/boosted_catch.mp3', 1)
+        musicSelected.pause()
+
+        setTimeout(() => {            
+            continuousSoundEffect = new Audio('sounds/boosted_effect.mp3')
+            continuousSoundEffect.volume = 0.15
+            continuousSoundEffect.play()
+
+            musicSelected = new Audio('sounds/music_boosted.mp3')
+            musicSelected.volume = 0.4
+            musicSelected.play()
+            musicSelected.addEventListener('ended', () => {
+                musicSelected.play()
+            })
+        }, 6000);
+
         player.gravity *= 0.6;
     }
 
@@ -666,7 +812,7 @@ function passOfPhase(phase = null){
 
     setTimeout(function() {
         newPhaseLabel.fadeOut(0.4);
-    }, 800);
+    }, BASE_WIDTH);
     
 }
 
@@ -677,7 +823,7 @@ function click() {
 
         //--------------------------------------------
         sounds.lobby.pause()
-        playSound('sounds/start_game.mp3', 0.4)
+        playSound('sounds/start_game.mp3', 0.2)
         
         let musics = [
             {name: 'music'},
@@ -702,8 +848,14 @@ function click() {
 
         //--------------------------------------------
         musicSelected.pause()
+        if(continuousSoundEffect){
+            continuousSoundEffect.pause()
+        }
         sounds.lobby.play()
         //--------------------------------------------
+
+        player._boosted = false
+        player._invincible = false
 
         GAME_STATE = game_states.play;
         obstacles.reset();
@@ -730,7 +882,7 @@ function drawHudText(
     middle = false, 
     color = '241, 241, 241', 
     strokeColor = '84, 84, 84',
-    fontSize = '600 50px'
+    fontSize = '600 30px'
 ){
     // Salvar o estado atual do context
     ctx.save();
@@ -741,8 +893,8 @@ function drawHudText(
     ctx.lineWidth = 1;
 
     if(middle){
-        ctx.fillText(text, 800/2 - ctx.measureText(text).width/2, canvas.height/3);
-        ctx.strokeText(text, 800/2 - ctx.measureText(text).width/2, canvas.height/3);    
+        ctx.fillText(text, BASE_WIDTH/2 - ctx.measureText(text).width/2, canvas.height/3);
+        ctx.strokeText(text, BASE_WIDTH/2 - ctx.measureText(text).width/2, canvas.height/3);    
     }else{
         ctx.fillText(text, x, y);
         ctx.strokeText(text, x, y);
