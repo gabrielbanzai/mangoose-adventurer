@@ -14,6 +14,7 @@ jumpStrength = 27,
 startLifes = 5,
 currentPhase = 0,
 // jumpStrength: 23.6,
+musicSelected
 
 phasePointsEvolution = [15, 30, 50, 80, 120, 150, 190, 250, 400, 500, 750, 1000, 1250, 1500, 2000, 2500, 3500],
 
@@ -75,7 +76,7 @@ player = {
     jumpStrength: jumpStrength,
     lifes: startLifes,
     speed: 0,
-    maxJumps: 0,
+    jumps: 0,
     score: 0,
     rotation: 0,
     colliding: false,
@@ -86,14 +87,14 @@ player = {
 
         if (this.y > ground.y - this.height && GAME_STATE != game_states.loose) {
             this.y = ground.y - this.height;
-            this.maxJumps = 0;
+            this.jumps = 0;
             this.speed = 0;
         }
     },
     jump: function (sound = true) {
-        if (this.maxJumps < maxJumps) {
+        if (this.jumps < maxJumps) {
             this.speed = -this.jumpStrength;
-            this.maxJumps++;
+            this.jumps++;
 
             //--------------------------------------------
             if(sound){
@@ -181,6 +182,10 @@ player = {
         this.score+=qtdePT;
         let phasePoints = findCurrentPhase(this.score)
 
+        let scr = new Audio('sounds/scored.mp3')
+        scr.volume = 0.1
+        scr.play()
+
         if(currentPhase != phasePoints){
             passOfPhase();
         }
@@ -216,8 +221,8 @@ obstacles = {
         }
 
         this._obs.push({
-            x: WIDTH, 
-            y: ground.y - Math.floor(20 + Math.random() * obstacleHeight),                           
+            x: 800, 
+            y: ground.y - Math.floor(20 + Math.random() * obstacleHeight), 
             width: 50,
             sprite: this._sprites[Math.floor(this._sprites.length * Math.random())]
         });
@@ -281,6 +286,7 @@ flying = {
         spriteFlying5Damaged,
     ],
     _scored: false,
+    _destroyed: false,
     insertionTime: 0,
     insert: function () {
 
@@ -288,12 +294,14 @@ flying = {
         const sprite = this._sprites[index]
 
         this._fly.push({
-            x: WIDTH, 
+            x: 800, 
             y: ground.y - Math.floor(250 + Math.random() * 200),                           
             width: sprite.width,
             height: sprite.height,
             sprite,
-            index
+            index,
+            _destroyed: false,
+            _scored: false
         });
 
         this.insertionTime = 30 + Math.floor(800 * Math.random());
@@ -315,6 +323,10 @@ flying = {
             var fly = this._fly[i];
             fly.x -= speedBase;
 
+            if (fly._destroyed) {
+                continue
+            }
+
             // Verificar colisão com o voador
             if (
             !player.colliding
@@ -325,26 +337,29 @@ flying = {
             && player.y <= fly.y + fly.height) {
                 // Colisão na frente do fly
                 //console.log(`Colidiu com voador ${i}`)
-                if(currentPhase < 5){
-                    player.collided()
-                }
-                if(!player.colliding){
+                if(!fly._destroyed){
+                    if(currentPhase < 5){
+                        player.collided()
+                    }
+    
                     this.destroy(fly)
                 }
                 
             }
 
-
+            //Colisão superior indica pontuação
             if (!player.colliding 
             && player.x + player.width >= fly.x 
             && player.x <= fly.x + fly.width 
             && player.y <= fly.y 
             && player.y + player.height >= fly.y) {
-              
-                if(!fly._scored){
-                    player.scored(fly, 5)
+                
+                if(!fly._destroyed){
+                    if(!fly._scored){
+                        player.scored(fly, 5)
+                    }
+                    this.destroy(fly)
                 }
-                this.destroy(fly)
 
             }
 
@@ -369,9 +384,11 @@ flying = {
         playSound('sounds/explosion.mp3', 0.17)
 
         let sprite =  this._brokenSprites[fly.index]
+        fly._destroyed = true;
 
+        player.jumps = 0
         player.jump(false)
-        player.maxJumps = 0
+        player.jumps = 0
         fly.sprite = sprite
         fly.speed++
 
@@ -391,7 +408,7 @@ life = {
     insertionTime: 9,
     insert: function () {
         this._lifes.push({
-            x: WIDTH, 
+            x: 800, 
             y: ground.y - Math.floor(250 + Math.random() * 200),                           
             width: spriteLife1.width,
             height: spriteLife1.height,
@@ -470,6 +487,9 @@ sounds = {
     lobby: new Audio('sounds/lobby.mp3'),
     start_game: new Audio('sounds/start_game.mp3'),
     music: new Audio('sounds/music.mp3'),
+    music2: new Audio('sounds/music2.mp3'),
+    music3: new Audio('sounds/music3.mp3'),
+    music4: new Audio('sounds/music4.mp3'),
     phase_advanced: new Audio('sounds/phase_advanced.mp3'),
     jump: new Audio('sounds/jump.mp3'),
     explosion: new Audio('sounds/explosion.mp3'),
@@ -478,6 +498,7 @@ sounds = {
     plane: new Audio('sounds/plane.mp3'),
     life_spawn: new Audio('sounds/life_spawn.mp3'),
     took_life: new Audio('sounds/took_life.mp3'),
+    scored: new Audio('sounds/scored.mp3'),
 }
 
 function main(){
@@ -492,6 +513,8 @@ function loadGame(){
     //--------------------------------------------
 
     //localStorage.removeItem("hightscores");
+    let scaleX = 1;
+    let scaleY = 1;
 
     HEIGHT = window.innerHeight;
     WIDTH = window.innerWidth;
@@ -510,6 +533,34 @@ function loadGame(){
     ctx = canvas.getContext("2d");
 
     document.body.appendChild(canvas);
+
+    scaleX = canvas.width / 800;
+    scaleY = canvas.height / 600;
+
+    ctx.scale(scaleX, scaleY);
+
+    function resizeCanvas() {
+        const aspectRatio = 800 / 600;
+
+        // Calcula o tamanho máximo possível mantendo a proporção
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+
+        if (width / height > aspectRatio) {
+            width = height * aspectRatio;
+        } else {
+            height = width / aspectRatio;
+        }
+
+        // Ajusta o estilo do canvas (tamanho visual)
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+    }
+
+    // Redimensionar ao carregar e sempre que a janela mudar de tamanho
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
     document.addEventListener("mousedown", click);
 
     GAME_STATE = game_states.play;
@@ -528,6 +579,7 @@ function loadGame(){
 function loop() {
 
     update();
+
     draw();
 
     window.requestAnimationFrame(loop);
@@ -576,16 +628,16 @@ function draw() {
     }
 
     if(GAME_STATE == game_states.play){
-        spritePlay.draw(WIDTH / 2 - spritePlay.width/2, HEIGHT / 2 - spritePlay.height/2)
+        spritePlay.draw(800 / 2 - spritePlay.width/2, 600 / 2 - spritePlay.height/2)
     }
 
     if(GAME_STATE == game_states.loose){
-        spriteLoose.draw(WIDTH / 2 - spriteLoose.width/2, HEIGHT / 2 - spriteLoose.height/2 - spriteHighscore.height/2);
+        spriteLoose.draw(800 / 2 - spriteLoose.width/2, 600 / 2 - spriteLoose.height/2 - spriteHighscore.height/2);
     
         drawHudText(player.score, 410, 310)
         
         if(player.score > parseInt(hightscores)){
-            spriteHighscore.draw(WIDTH / 2 - spriteHighscore.width/2, HEIGHT / 2 + spriteLoose.height/2 - spriteHighscore.height/2-83);
+            spriteHighscore.draw(800 / 2 - spriteHighscore.width/2, 600 / 2 + spriteLoose.height/2 - spriteHighscore.height/2-83);
             drawHudText(player.score, 360, 400)
         }
     }
@@ -626,10 +678,22 @@ function click() {
         //--------------------------------------------
         sounds.lobby.pause()
         playSound('sounds/start_game.mp3', 0.4)
-        sounds.music.volume = 0.23
-        sounds.music.play()
-        sounds.music.addEventListener('ended', () => {
-            sounds.music.play();
+        
+        let musics = [
+            {name: 'music'},
+            {name: 'music2'},
+            {name: 'music3'},
+            {name: 'music4'},
+        ]
+
+        const randomIndex = Math.floor(Math.random() * musics.length);
+
+        musicSelected = sounds[musics[randomIndex].name]; 
+
+        musicSelected.volume = 0.23
+        musicSelected.play()
+        musicSelected.addEventListener('ended', () => {
+            musicSelected.play()
         })
         //--------------------------------------------
 
@@ -637,6 +701,7 @@ function click() {
     } else if (GAME_STATE == game_states.loose && player.y >= 2 * HEIGHT) {
 
         //--------------------------------------------
+        musicSelected.pause()
         sounds.lobby.play()
         //--------------------------------------------
 
@@ -676,8 +741,8 @@ function drawHudText(
     ctx.lineWidth = 1;
 
     if(middle){
-        ctx.fillText(text, canvas.width/2 - ctx.measureText(text).width/2, canvas.height/3);
-        ctx.strokeText(text, canvas.width/2 - ctx.measureText(text).width/2, canvas.height/3);    
+        ctx.fillText(text, 800/2 - ctx.measureText(text).width/2, canvas.height/3);
+        ctx.strokeText(text, 800/2 - ctx.measureText(text).width/2, canvas.height/3);    
     }else{
         ctx.fillText(text, x, y);
         ctx.strokeText(text, x, y);

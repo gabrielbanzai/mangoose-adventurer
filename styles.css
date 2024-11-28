@@ -122,21 +122,26 @@ max-height: 340px;
 overflow-y: scroll;
 }
 body { 
-    width: 100vw;
-    height: 100vh;
+    margin: 0;
     display: flex;
-    flex-direction: column;
     justify-content: center;
     align-items: center;
+    height: 100vh;
+    background-color: #000;
+    overflow: hidden; /* Evita rolagem */
 }
 
 canvas {
-    position: absolute;
+    /* position: absolute;
     top: 0px;
     bottom: 0px;
     left: 0px;
     right: 0px;
-    margin: auto;
+    margin: auto; */
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 100%;
 }
 
 .title{
