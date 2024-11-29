@@ -10,7 +10,7 @@ var canvas, ctx, HEIGHT, WIDTH, GAME_STATE, hightscores, tile, obstacleHeight,
 maxJumps = 3, 
 speedBase = 8,
 gravity = 1.500,
-jumpStrength = 27,
+jumpStrength = 30,
 startLifes = 5,
 currentPhase = 0,
 // jumpStrength: 23.6,
@@ -501,15 +501,15 @@ life = {
 //Item de Vida
 slow = {
     _slows: [],
-    sprite: spriteLife1,
+    sprite: spriteClock,
     _scored: false,
     insertionTime: 9,
     insert: function () {
         this._slows.push({
             x: BASE_WIDTH, 
             y: ground.y - Math.floor(250 + Math.random() * 200),                           
-            width: spriteLife1.width,
-            height: spriteLife1.height,
+            width: spriteClock.width,
+            height: spriteClock.height,
             sprite: this.sprite
         });
 
@@ -521,7 +521,7 @@ slow = {
             this.insert();
 
             //--------------------------------------------
-            //playSound('sounds/life_spawn.mp3', 0.2)
+            playSound('sounds/clock.mp3', 0.2)
             //--------------------------------------------
 
         } else {
@@ -565,17 +565,14 @@ slow = {
                     musicSelected.play()
                 }, 5000);
 
-                slow.sprite = spriteLife2
+                slow.sprite = spriteClockBroken
 
                 setTimeout(() => {
-                    slow.sprite = spriteLife3
+                    slow.sprite = spriteClockBroken2
                 }, 100);
                 setTimeout(() => {
-                    slow.sprite = spriteLife4
+                    slow.sprite = spriteClockBroken3
                 }, 200);
-                setTimeout(() => {
-                    slow.sprite = spriteLife5
-                }, 300);
 
                 setTimeout(() => {
                     this._slows.splice(i, 1);
@@ -624,6 +621,7 @@ sounds = {
     took_life: new Audio('sounds/took_life.mp3'),
     slow: new Audio('sounds/slow.mp3'),
     scored: new Audio('sounds/scored.mp3'),
+    clock: new Audio('sounds/clock.mp3'),
 }
 
 function main(){
@@ -719,7 +717,7 @@ function update() {
         obstacles.update();
         flying.update();
         life.update();
-        // slow.update();
+        slow.update();
     } 
 }
 
@@ -752,7 +750,7 @@ function draw() {
         obstacles.draw();
         flying.draw();
         life.draw();
-        // slow.draw();
+        slow.draw();
     }
 
     if(GAME_STATE == game_states.play){
