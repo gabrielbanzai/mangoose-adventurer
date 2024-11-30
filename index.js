@@ -96,6 +96,9 @@ player = {
             this.y = ground.y - this.height;
             this.jumps = 0;
             this.speed = 0;
+            this.jumpStrength = 30
+            this._boosted = false
+            this._invincible = false
         }
     },
     jump: function (sound = true) {
@@ -819,8 +822,8 @@ function passOfPhase(phase = null){
                 musicSelected.play()
             })
         }, 6000);
-
-        player.gravity *= 0.6;
+        player.jumpStrength = 60
+        //player.gravity *= 0.6;
     }
 
     newPhaseLabel.text = "Level " + currentPhase;
@@ -869,9 +872,6 @@ function click() {
         }
         sounds.lobby.play()
         //--------------------------------------------
-
-        player._boosted = false
-        player._invincible = false
 
         GAME_STATE = game_states.play;
         obstacles.reset();
