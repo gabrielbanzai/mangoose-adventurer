@@ -115,7 +115,7 @@ player = {
 
             setTimeout(() => {
                 this._jumping = false
-            }, 500);
+            }, 150);
 
         }
     },
