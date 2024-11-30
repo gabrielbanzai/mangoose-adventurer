@@ -96,9 +96,6 @@ player = {
             this.y = ground.y - this.height;
             this.jumps = 0;
             this.speed = 0;
-            this.jumpStrength = 30
-            this._boosted = false
-            this._invincible = false
         }
     },
     jump: function (sound = true) {
@@ -135,7 +132,7 @@ player = {
         this.score = 0;
 
         speedBase = 8;
-        this.gravity = 1.567;
+        this.gravity = 1.500;
         currentPhase = 0;
     },
     draw: function () {
@@ -822,7 +819,7 @@ function passOfPhase(phase = null){
                 musicSelected.play()
             })
         }, 6000);
-        player.jumpStrength = 60
+        player.jumpStrength = 37
         //player.gravity *= 0.6;
     }
 
