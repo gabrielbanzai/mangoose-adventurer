@@ -86,6 +86,7 @@ player = {
     colliding: false,
     _boosted: false,
     _invincible: false,
+    _jumping: false,
     update: function () {
         this.speed += this.gravity;
         this.y += this.speed;
@@ -99,15 +100,21 @@ player = {
     },
     jump: function (sound = true) {
         if (this.jumps < maxJumps) {
-            this.speed = -this.jumpStrength;
-            this.jumps++;
 
-            //--------------------------------------------
-            if(sound){
-                playSound('sounds/jump.mp3', 0.140)
+            if(!this._jumping){
+                this.speed = -this.jumpStrength;
+                this.jumps++;
+                this._jumping = true
+                setTimeout(() => {
+                    this._jumping = false
+                }, 150);
+
+                //--------------------------------------------
+                if(sound){
+                    playSound('sounds/jump.mp3', 0.140)
+                }
+                //--------------------------------------------
             }
-            //--------------------------------------------
-
         }
     },
     reset: function () {
@@ -684,8 +691,17 @@ function loadGame(){
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    document.addEventListener("mousedown", click);
-    document.addEventListener("keydown", click);
+    const userAgent = navigator.userAgent.toLowerCase();
+
+    const isMobile = /android|iphone|ipad|ipod|blackberry|iemobile|opera mini/.test(userAgent);
+
+    if(isMobile){
+        document.addEventListener("touchstart", click);
+    }else{
+        document.addEventListener("mousedown", click);
+        document.addEventListener("keydown", click);
+    }
+
 
     GAME_STATE = game_states.play;
     hightscores = localStorage.getItem("hightscores");
