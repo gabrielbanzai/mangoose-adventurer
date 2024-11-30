@@ -5,11 +5,6 @@
 - WIDTH
 - frames : taxa de quadros
 */
-
-const userAgent = navigator.userAgent.toLowerCase();
-
-const isMobile = /android|iphone|ipad|ipod|blackberry|iemobile|opera mini/.test(userAgent);
-
 var canvas, ctx, HEIGHT, WIDTH, GAME_STATE, hightscores, tile, obstacleHeight,
 
 maxJumps = 3, 
@@ -109,10 +104,6 @@ player = {
             if(!this._jumping){
                 this.speed = -this.jumpStrength;
                 this.jumps++;
-                this._jumping = true
-                setTimeout(() => {
-                    this._jumping = false
-                }, 150);
 
                 //--------------------------------------------
                 if(sound){
@@ -120,6 +111,12 @@ player = {
                 }
                 //--------------------------------------------
             }
+            this._jumping = true
+
+            setTimeout(() => {
+                this._jumping = false
+            }, 500);
+
         }
     },
     reset: function () {
@@ -669,23 +666,6 @@ function loadGame(){
 
     document.body.appendChild(canvas);
 
-    if(isMobile){
-        document.body.classList.add('is-mobile')
-        let btnControl = document.createElement('button')
-        btnControl.setAttribute('class', 'push--skeuo')
-        btnControl.setAttribute('id', 'button-click')
-        btnControl.addEventListener('touchstart', click)
-        document.body.appendChild(btnControl);
-        let divButtonControl = document.createElement('div')
-        divButtonControl.setAttribute('id', 'controls-area')
-
-        
-    }else{
-        document.body.classList.remove('is-mobile')
-    }
-
-    //Adicionando controles em caso de Mobile
-
     scaleX = canvas.width / BASE_WIDTH;
     scaleY = canvas.height / BASE_HEIGHT;
 
@@ -713,8 +693,12 @@ function loadGame(){
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
+    const userAgent = navigator.userAgent.toLowerCase();
+
+    const isMobile = /android|iphone|ipad|ipod|blackberry|iemobile|opera mini/.test(userAgent);
+
     if(isMobile){
-        //document.addEventListener("touchstart", click);
+        document.addEventListener("touchstart", click);
     }else{
         document.addEventListener("mousedown", click);
         document.addEventListener("keydown", click);
@@ -732,53 +716,6 @@ function loadGame(){
     tile.src = "imgs/sheet.png";
 
     loop();
-}
-
-function startGame(){
-
-    if (GAME_STATE == game_states.play) {
-
-        //--------------------------------------------
-        sounds.lobby.pause()
-        playSound('sounds/start_game.mp3', 0.2)
-        
-        let musics = [
-            {name: 'music'},
-            {name: 'music2'},
-            {name: 'music3'},
-            {name: 'music4'},
-        ]
-
-        const randomIndex = Math.floor(Math.random() * musics.length);
-
-        musicSelected = sounds[musics[randomIndex].name]; 
-
-        musicSelected.volume = 0.23
-        musicSelected.play()
-        musicSelected.addEventListener('ended', () => {
-            musicSelected.play()
-        })
-        //--------------------------------------------
-
-        GAME_STATE = game_states.playing;
-    } else if (GAME_STATE == game_states.loose && player.y >= 2 * HEIGHT) {
-
-        //--------------------------------------------
-        musicSelected.pause()
-        if(continuousSoundEffect){
-            continuousSoundEffect.pause()
-        }
-        sounds.lobby.play()
-        //--------------------------------------------
-
-        player._boosted = false
-        player._invincible = false
-        player._jumping = false
-
-        GAME_STATE = game_states.play;
-        obstacles.reset();
-        player.reset();
-    }
 }
 
 function loop() {
@@ -898,9 +835,49 @@ function passOfPhase(phase = null){
 function click() {
     if (GAME_STATE == game_states.playing) {
         player.jump();
-    }else{
-        startGame()
+    } else if (GAME_STATE == game_states.play) {
+
+        //--------------------------------------------
+        sounds.lobby.pause()
+        playSound('sounds/start_game.mp3', 0.2)
+        
+        let musics = [
+            {name: 'music'},
+            {name: 'music2'},
+            {name: 'music3'},
+            {name: 'music4'},
+        ]
+
+        const randomIndex = Math.floor(Math.random() * musics.length);
+
+        musicSelected = sounds[musics[randomIndex].name]; 
+
+        musicSelected.volume = 0.23
+        musicSelected.play()
+        musicSelected.addEventListener('ended', () => {
+            musicSelected.play()
+        })
+        //--------------------------------------------
+
+        GAME_STATE = game_states.playing;
+    } else if (GAME_STATE == game_states.loose && player.y >= 2 * HEIGHT) {
+
+        //--------------------------------------------
+        musicSelected.pause()
+        if(continuousSoundEffect){
+            continuousSoundEffect.pause()
+        }
+        sounds.lobby.play()
+        //--------------------------------------------
+
+        player._boosted = false
+        player._invincible = false
+
+        GAME_STATE = game_states.play;
+        obstacles.reset();
+        player.reset();
     }
+    
 }
 
 function playSound(path, volume = null){
