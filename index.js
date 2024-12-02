@@ -16,7 +16,7 @@ currentPhase = 0,
 // jumpStrength: 23.6,
 musicSelected,
 continuousSoundEffect,
-
+scoreEffects = [],
 phasePointsEvolution = [15, 30, 50, 80, 120, 150, 190, 250, 400, 500, 750, 1000, 1250, 1500, 2000, 2500, 3500],
 
 BASE_WIDTH = 800;
@@ -130,7 +130,11 @@ player = {
 
         this.lifes = startLifes;
         this.score = 0;
-
+        this._boosted = false;
+        this._invincible = false;
+        this._jumping = false;
+        this._scored = false
+        this.jumpStrength = 30
         speedBase = 8;
         this.gravity = 1.500;
         currentPhase = 0;
@@ -206,6 +210,8 @@ player = {
         this.score+=qtdePT;
         let phasePoints = findCurrentPhase(this.score)
 
+        addScoreEffect(this.x + this.width / 2, this.y, qtdePT);
+
         let scr = new Audio('sounds/scored.mp3')
         scr.volume = 0.04
         scr.play()
@@ -273,7 +279,7 @@ obstacles = {
                 && player.y + player.height >= obs.y
             ) {
                 player.collided()
-            } else if (obs.x <= 0 && !obs._scored) {
+            } else if (obs.x <= 0 && !obs._scored && !player.colliding) {
                 player.scored(obs)
             } else if (obs.x <= -obs.width) {
                 this._obs.splice(i, 1);
@@ -312,7 +318,7 @@ flying = {
     ],
     _scored: false,
     _destroyed: false,
-    insertionTime: 0,
+    insertionTime: 30 + Math.floor(600 * Math.random()),
     insert: function () {
 
         const index = Math.floor(this._sprites.length * Math.random())
@@ -381,7 +387,7 @@ flying = {
                 
                 if(!fly._destroyed){
                     if(!fly._scored){
-                        player.scored(fly, 5)
+                        player.scored(fly, 15)
                     }
                     this.destroy(fly)
                 }
@@ -430,7 +436,7 @@ life = {
     _lifes: [],
     sprite: spriteLife1,
     _scored: false,
-    insertionTime: 9,
+    insertionTime: 500 + Math.floor(800 * Math.random()),
     insert: function () {
         this._lifes.push({
             x: BASE_WIDTH, 
@@ -512,7 +518,7 @@ slow = {
     _slows: [],
     sprite: spriteClock,
     _scored: false,
-    insertionTime: 9,
+    insertionTime: 1600 + Math.floor(1000 * Math.random()),
     insert: function () {
         this._slows.push({
             x: BASE_WIDTH, 
@@ -522,7 +528,7 @@ slow = {
             sprite: this.sprite
         });
 
-        this.insertionTime = 600 + Math.floor(1000 * Math.random());
+        this.insertionTime = 1600 + Math.floor(1000 * Math.random());
     },
     update: function () {
 
@@ -704,7 +710,6 @@ function loadGame(){
         document.addEventListener("keydown", click);
     }
 
-
     GAME_STATE = game_states.play;
     hightscores = localStorage.getItem("hightscores");
 
@@ -728,15 +733,17 @@ function loop() {
 }
 
 function update() {
-    ground.update();
-    player.update();
+    if(ctx){
+        ground.update();
+        player.update();
 
-    if (GAME_STATE == game_states.playing) {
-        obstacles.update();
-        flying.update();
-        life.update();
-        slow.update();
-    } 
+        if (GAME_STATE == game_states.playing) {
+            obstacles.update();
+            flying.update();
+            life.update();
+            slow.update();
+        } 
+    }
 }
 
 function draw() {
@@ -788,6 +795,7 @@ function draw() {
 
     ground.draw();               
     player.draw();
+    updateAndDrawScoreEffects(ctx)
 }
 
 function passOfPhase(phase = null){
@@ -925,6 +933,42 @@ function findCurrentPhase(pontos) {
     }
     // Se ultrapassar todos os limites, está na última fase
     return phasePointsEvolution.length;
+}
+
+function addScoreEffect(x, y, score) {
+    scoreEffects.push({
+        x, 
+        y, 
+        text: `+${score}`, 
+        opacity: 1, 
+        dy: -0.5 // Velocidade de subida
+    });
+}
+
+function updateAndDrawScoreEffects() {
+    for (let i = scoreEffects.length - 1; i >= 0; i--) {
+        const effect = scoreEffects[i];
+        
+        // Atualiza posição e opacidade
+        effect.y += effect.dy; // Move o texto para cima
+        effect.opacity -= 0.02; // Reduz a opacidade gradualmente
+
+        // Impede que a opacidade volte a subir
+        effect.opacity = Math.max(0, effect.opacity); // Garante que não fique abaixo de 0
+
+        // Desenha o texto com a opacidade atual
+        ctx.save();
+        ctx.globalAlpha = effect.opacity;
+        ctx.font = '48px Arial';
+        ctx.fillStyle = 'yellow';
+        ctx.fillText(effect.text, effect.x, effect.y);
+        ctx.restore();
+
+        // Remove o efeito se a opacidade chegar a zero
+        if (effect.opacity <= 0) {
+            scoreEffects.splice(i, 1);
+        }
+    }
 }
   
 window.onload = (event) => main()
