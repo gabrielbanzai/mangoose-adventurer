@@ -1,11 +1,13 @@
-# Usa a imagem leve do Nginx
-FROM nginx:alpine
+FROM node:18-alpine
 
-# Copia todo o conteúdo do projeto para o Nginx
-COPY . /usr/share/nginx/html
+# Copia todo o projeto
+COPY . .
 
-# Expõe a porta que queremos usar
+# Instala o servidor estático "serve"
+RUN npm install -g serve
+
+# Expõe a porta que você quer usar no Dokploy
 EXPOSE 3101
 
-# Comando padrão do Nginx (não precisa mudar)
-CMD ["nginx", "-g", "daemon off;"]
+# Inicia o servidor estático na porta 3101
+CMD ["serve", "-s", ".", "-l", "3101"]
