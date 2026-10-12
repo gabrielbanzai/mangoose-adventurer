@@ -7,7 +7,7 @@ COPY . .
 RUN npm install -g serve
 
 # Expõe a porta que você quer usar no Dokploy
-EXPOSE 3101
+EXPOSE 3105
 
-# Inicia o servidor estático na porta 3101
-CMD ["serve", "-s", ".", "-l", "3101"]
+# Inicia o servidor estático na porta 3105
+CMD ["serve", "-s", ".", "-l", "3105"]
